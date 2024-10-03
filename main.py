@@ -1,6 +1,7 @@
 # fastapi 기본 임포트
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from datetime import datetime
 from typing import Dict, Any
 from pydantic import BaseModel
@@ -20,11 +21,28 @@ app.add_middleware(
     allow_headers=["*"],  # 모든 헤더 허용
 )
 
+
 @app.get("/")
 def read_root():
     return {"PLKIT": "DEV"}
+
 
 # dummy 관련 라우트 추가
 app.include_router(dummy_router, prefix="/dummy")
 # status 관련 라우트 추가
 app.include_router(status_router, prefix="/status")
+
+
+@app.post("/image")
+async def save_image(request: Request):
+    contents = await request.body()
+    with open("current.jpeg", "wb") as fp:
+        fp.write(contents)
+
+    return "image send finished"
+
+
+@app.get("/image")
+async def get_image(request: Request):
+    image_path = "current.jpeg"
+    return FileResponse(image_path)
