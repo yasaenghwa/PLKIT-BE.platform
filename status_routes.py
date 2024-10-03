@@ -9,10 +9,12 @@ router = APIRouter()
 # 최근 센서 및 제어 데이터를 저장할 변수
 latest_data: Dict[str, Any] = {}
 
+
 # Pydantic 모델 정의
 class SensorControlData(BaseModel):
     sensors: Dict[str, Any]
     controls: Dict[str, Any]
+
 
 @router.get("/data", response_model=Dict[str, Any])
 def get_latest_sensor_data():
@@ -22,6 +24,7 @@ def get_latest_sensor_data():
     if not latest_data:
         raise HTTPException(status_code=404, detail="No sensor data available")
     return latest_data
+
 
 @router.post("/data", response_model=Dict[str, Any])
 def update_sensor_data(data: SensorControlData):
@@ -33,6 +36,6 @@ def update_sensor_data(data: SensorControlData):
     latest_data = {
         "timestamp": datetime.now().isoformat(),
         "sensors": data.sensors,
-        "controls": data.controls
+        "controls": data.controls,
     }
     return latest_data
