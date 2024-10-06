@@ -1,7 +1,7 @@
 # fastapi 기본 임포트
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from datetime import datetime
 from typing import Dict, Any
 from pydantic import BaseModel
@@ -46,3 +46,44 @@ async def save_image(request: Request):
 async def get_image(request: Request):
     image_path = "current.jpeg"
     return FileResponse(image_path)
+
+
+# 연결된 클라이언트를 관리하기 위한 매니저 클래스
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, data: bytes):
+        for connection in self.active_connections:
+            await connection.send_bytes(data)
+
+manager = ConnectionManager()
+
+# ESP32가 동영상 데이터를 전송하는 WebSocket 엔드포인트
+@app.websocket("/ws/video_feed")
+async def video_feed_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            await manager.broadcast(data)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+# 클라이언트가 동영상을 수신하는 WebSocket 엔드포인트
+@app.websocket("/ws/video")
+async def video_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # 데이터를 수신할 필요는 없으므로 패스
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
