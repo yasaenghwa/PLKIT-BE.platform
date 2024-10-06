@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 from datetime import datetime
 from typing import Dict, Any
 from pydantic import BaseModel
+import asyncio
 
 # dummy_routes.py에서 라우트 가져오기
 from dummy_routes import router as dummy_router
@@ -61,8 +62,11 @@ class ConnectionManager:
         self.active_connections.remove(websocket)
 
     async def broadcast(self, data: bytes):
-        for connection in self.active_connections:
-            await connection.send_bytes(data)
+        await asyncio.gather(
+            *[connection.send_bytes(data) for connection in self.active_connections],
+            return_exceptions=True  # 예외 처리를 위해 추가
+        )
+
 
 manager = ConnectionManager()
 
