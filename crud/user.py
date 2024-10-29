@@ -4,6 +4,7 @@ from models.user import User
 from schemas.user import UserCreate
 from config import settings
 from passlib.context import CryptContext
+from typing import Dict
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -19,6 +20,16 @@ def create_user(db: Session, user: UserCreate):
     db.commit()
     db.refresh(db_user)
     return db_user
+
+def update_user(db: Session, user_id: int, update_data: Dict):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return None
+    for key, value in update_data.items():
+        setattr(user, key, value)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def verify_password(plain_password, hashed_password):
