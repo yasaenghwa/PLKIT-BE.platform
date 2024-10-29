@@ -8,7 +8,7 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional
 import crud, schemas, database
 from config import settings
-from schemas.user import Token, TokenData, UserResponse, UserCreate
+from schemas.auth import Token, TokenData, UserResponse, UserCreate
 from database import get_db
 
 # 설정된 OAuth2PasswordBearer 인스턴스 생성
