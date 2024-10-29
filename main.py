@@ -8,7 +8,7 @@ from pydantic import BaseModel
 import asyncio
 
 # dummy_routes.py에서 라우트 가져오기
-from routers import dummies, statuses, auth, user
+from routers import dummies, statuses, auth, user, communities
 
 app = FastAPI()
 
@@ -34,6 +34,7 @@ app.include_router(statuses.router, prefix="/statuses", tags=["Statuses"])
 #
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(communities.router)
 
 
 # 연결된 클라이언트를 관리하기 위한 매니저 클래스
