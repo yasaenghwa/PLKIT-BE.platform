@@ -8,8 +8,7 @@ from pydantic import BaseModel
 import asyncio
 
 # dummy_routes.py에서 라우트 가져오기
-from dummy_routes import router as dummy_router
-from status_routes import router as status_router
+from routers import dummies, statuses
 
 app = FastAPI()
 
@@ -29,24 +28,9 @@ def read_root():
 
 
 # dummy 관련 라우트 추가
-app.include_router(dummy_router, prefix="/dummy")
+app.include_router(dummies.router, prefix="/dummy", tags=["Dummies"])
 # status 관련 라우트 추가
-app.include_router(status_router, prefix="/status")
-
-
-@app.post("/image")
-async def save_image(request: Request):
-    contents = await request.body()
-    with open("current.jpeg", "wb") as fp:
-        fp.write(contents)
-
-    return "image send finished"
-
-
-@app.get("/image")
-async def get_image(request: Request):
-    image_path = "current.jpeg"
-    return FileResponse(image_path)
+app.include_router(statuses.router, prefix="/statuses", tags=["statuses"])
 
 
 # 연결된 클라이언트를 관리하기 위한 매니저 클래스
@@ -70,6 +54,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+
 # ESP32가 동영상 데이터를 전송하는 WebSocket 엔드포인트
 @app.websocket("/ws/video_feed")
 async def video_feed_endpoint(websocket: WebSocket):
@@ -80,6 +65,7 @@ async def video_feed_endpoint(websocket: WebSocket):
             await manager.broadcast(data)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
 
 # 클라이언트가 동영상을 수신하는 WebSocket 엔드포인트
 @app.websocket("/ws/video")
