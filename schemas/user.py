@@ -2,28 +2,24 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 
-
 class UserBase(BaseModel):
-    email: EmailStr
-    name: str
-    avatar: Optional[str] = None
-
+    name: Optional[str]
+    avatar: Optional[str]
 
 class UserCreate(UserBase):
+    email: EmailStr
     password: str
-
 
 class UserResponse(UserBase):
     id: int
+    email: EmailStr
 
     class Config:
         orm_mode = True
 
+class UserUpdate(UserBase):
+    pass
 
 class Token(BaseModel):
-    access_token: str  # 변경된 필드명
+    access_token: str
     token_type: str
-
-
-class TokenData(BaseModel):
-    email: Optional[str] = None
