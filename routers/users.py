@@ -1,5 +1,6 @@
 # app/routers/user.py
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import crud, schemas, database
@@ -93,3 +94,21 @@ async def update_user_avatar(
     # 사용자 정보 업데이트
     updated_user = crud.user.update_user(db, user_id=current_user.id, update_data=update_data)
     return updated_user
+
+@router.get("/me/avatar", response_class=FileResponse)
+async def get_user_avatar(
+    current_user: schemas.user.UserResponse = Depends(get_current_user),
+):
+    """
+    현재 로그인된 사용자의 프로필 이미지를 반환합니다.
+    """
+    if not current_user.avatar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지가 설정되지 않았습니다."
+        )
+    avatar_path = Path(current_user.avatar)
+    if not avatar_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지를 찾을 수 없습니다."
+        )
+    return FileResponse(avatar_path)
