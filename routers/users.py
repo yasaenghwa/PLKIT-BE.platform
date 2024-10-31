@@ -3,12 +3,15 @@ from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import crud, schemas, database
-from schemas.user import UserResponse
+from schemas.user import UserResponse, UserLinkCreate, UserLinkResponse
 import jwt
-from typing import Optional
+from typing import List, Optional
 from config import settings
 from uuid import uuid4
 from pathlib import Path
+from models.user import User, UserLink
+
+router = APIRouter(prefix="/users", tags=["Users"])
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -148,3 +151,59 @@ async def get_user_avatar_by_id(
         )
 
     return FileResponse(avatar_path)
+
+### 1. POST: Add a new user link
+@router.post("/link", response_model=UserLinkResponse, status_code=status.HTTP_201_CREATED)
+async def add_user_link(
+    link_data: UserLinkCreate,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    사용자 링크를 추가합니다.
+    """
+    new_link = crud.user.add_user_link(db, user_id=current_user.id, link_data=link_data)
+    return new_link
+
+### 2. GET: Retrieve all links for the current user
+@router.get("/me/links", response_model=List[UserLinkResponse])
+async def get_user_links(
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    현재 사용자의 모든 링크를 조회합니다.
+    """
+    links = crud.user.get_user_links(db, user_id=current_user.id)
+    return links
+
+### 3. PATCH: Update a specific user link
+@router.patch("/link/{link_id}", response_model=UserLinkResponse)
+async def update_user_link(
+    link_id: int,
+    link_data: UserLinkCreate,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    특정 사용자 링크를 업데이트합니다.
+    """
+    updated_link = crud.user.update_user_link(db, user_id=current_user.id, link_id=link_id, link_data=link_data)
+    if not updated_link:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="링크를 찾을 수 없습니다.")
+    return updated_link
+
+### 4. DELETE: Remove a specific user link
+@router.delete("/link/{link_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_link(
+    link_id: int,
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    특정 사용자 링크를 삭제합니다.
+    """
+    success = crud.user.delete_user_link(db, user_id=current_user.id, link_id=link_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="링크를 찾을 수 없습니다.")
+    return
