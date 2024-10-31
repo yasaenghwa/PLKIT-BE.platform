@@ -1,4 +1,3 @@
-# app/routers/user.py
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer
@@ -62,15 +61,14 @@ async def update_user_name(
     현재 로그인된 사용자의 이름을 업데이트합니다.
     - `name`: 새로운 이름
     """
-    update_data = {}
-    
-    # 이름 업데이트
     if name:
-        update_data["name"] = name
-
-    # 사용자 정보 업데이트
-    updated_user = crud.user.update_user(db, user_id=current_user.id, update_data=update_data)
-    return updated_user
+        update_data = {"name": name}
+        updated_user = crud.user.update_user(db, user_id=current_user.id, update_data=update_data)
+        return updated_user
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="이름을 제공해야 합니다."
+        )
 
 @router.patch("/me/avatar", response_model=UserResponse)
 async def update_user_avatar(
@@ -85,13 +83,19 @@ async def update_user_avatar(
     # 프로필 이미지 업로드 및 저장
     avatar_filename = f"{uuid4()}{Path(avatar.filename).suffix}"
     avatar_path = UPLOAD_DIR / avatar_filename
+
+    # 파일 저장
     with open(avatar_path, "wb") as buffer:
         buffer.write(avatar.file.read())
     
-    # DB에 저장할 경로
-    update_data = {"avatar": str(avatar_path)}
+    # 기존 프로필 이미지 삭제 (옵션)
+    if current_user.avatar:
+        old_avatar_path = Path(current_user.avatar)
+        if old_avatar_path.exists():
+            old_avatar_path.unlink()
 
-    # 사용자 정보 업데이트
+    # DB에 저장할 경로
+    update_data = {"avatar": str(avatar_filename)}
     updated_user = crud.user.update_user(db, user_id=current_user.id, update_data=update_data)
     return updated_user
 
@@ -106,9 +110,41 @@ async def get_user_avatar(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지가 설정되지 않았습니다."
         )
-    avatar_path = Path(current_user.avatar)
+    
+    avatar_path = UPLOAD_DIR / current_user.avatar
     if not avatar_path.exists():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지를 찾을 수 없습니다."
         )
+    
+    return FileResponse(avatar_path)
+
+@router.get("/{id}/avatar", response_class=FileResponse)
+async def get_user_avatar_by_id(
+    id: int, db: Session = Depends(database.get_db)
+):
+    """
+    특정 사용자의 프로필 이미지를 반환합니다.
+    - `id`: 사용자 ID
+    """
+    
+    # 사용자 조회
+    user = crud.user.get_user_by_id(db, user_id=id)   
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다."
+        )
+
+    # 프로필 이미지 경로 확인
+    if not user.avatar:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지가 설정되지 않았습니다."
+        )
+
+    avatar_path = UPLOAD_DIR / user.avatar
+    if not avatar_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="프로필 이미지를 찾을 수 없습니다."
+        )
+
     return FileResponse(avatar_path)
