@@ -1,5 +1,5 @@
 # app/models/user.py
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -14,3 +14,13 @@ class User(Base):
 
     # 역방향 관계 설정
     communities = relationship("Community", back_populates="writer")
+    links = relationship("UserLink", back_populates="user")
+
+class UserLink(Base):
+    __tablename__ = "user_link"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
+    url = Column(String, nullable=False)
+
+    # Relationships
+    user = relationship("User", back_populates="links")
