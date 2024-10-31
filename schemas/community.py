@@ -3,19 +3,41 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import List, Optional
 
-class CommunityBase(BaseModel):
+class WriterResponse(BaseModel):
+    id: int
+    name: str
+    avatar: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+class CommunityCreate(BaseModel):
+    title: str
+    content: str
+    writer_id: int
+
+class CommunityResponse(BaseModel):
+    id: int
+    writer_id: int
+    title: str
+    content: str
+    created_at: datetime
+    image: Optional[str] = None
+    answers: List[dict] = []
+
+    class Config:
+        orm_mode = True
+        
+class CommunitySearchResponse(BaseModel):
+    id: int
+    writer_name: str
     title: str
     content: str
     image: Optional[str] = None
-
-class CommunityCreate(CommunityBase):
-    writer_id: int
-
-class CommunityResponse(CommunityBase):
-    id: int
-    writer: dict
     created_at: datetime
     answers: List[dict] = []
 
     class Config:
         orm_mode = True
+
