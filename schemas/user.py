@@ -23,3 +23,12 @@ class UserUpdate(UserBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+    
+class UserLinkCreate(BaseModel):
+    url: str
+
+class UserLinkResponse(UserLinkCreate):
+    id: int
+
+    class Config:
+        orm_mode = True
