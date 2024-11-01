@@ -32,6 +32,7 @@ class CommunityResponse(BaseModel):
 class CommunitySearchResponse(BaseModel):
     id: int
     writer_name: str
+    writer_id: int
     title: str
     content: str
     image: Optional[str] = None
