@@ -65,6 +65,7 @@ async def list_communities(keyword: Optional[str] = None, db: Session = Depends(
             "content": community.content,
             "image": community.image,
             "created_at": community.created_at,
+            "writer_id": community.writer_id,
             "writer_name": writer.name,
             "answers": []  # answers는 현재 빈 리스트로 설정합니다
         }
