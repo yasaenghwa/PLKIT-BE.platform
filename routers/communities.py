@@ -9,6 +9,7 @@ import crud, schemas
 from database import get_db
 from uuid import uuid4
 from pathlib import Path
+from security import get_current_user
 
 router = APIRouter(prefix="/communities", tags=["Community"])
 
@@ -17,10 +18,16 @@ UPLOAD_DIR = Path("uploads/community_images")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/", response_model=schemas.community.CommunityResponse)
-async def create_community(community: schemas.community.CommunityCreate, db: Session = Depends(get_db)):
+async def create_community(
+    community: schemas.community.CommunityCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     """
     새로운 커뮤니티 게시물을 생성합니다.
     """
+    # 현재 인증된 사용자 정보를 사용해 작성자를 설정
+    community.writer_id = current_user.id
     new_community = crud.community.create_community(db, community)
     return new_community
 
@@ -34,14 +41,54 @@ async def get_community(community_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="게시물을 찾을 수 없습니다.")
     return community
 
+@router.patch("/{community_id}", response_model=schemas.community.CommunityResponse)
+async def update_community(
+    community_id: int, 
+    community_update: schemas.community.CommunityUpdate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    특정 커뮤니티 게시물을 수정합니다.
+    """
+    # 게시물 조회
+    community = db.query(Community).filter(Community.id == community_id).first()
+    if not community:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="게시물을 찾을 수 없습니다.")
+
+    # 작성자가 아닌 경우 권한 거부
+    if community.writer_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다.")
+
+    # 게시물 업데이트
+    for key, value in community_update.dict(exclude_unset=True).items():
+        setattr(community, key, value)
+
+    db.commit()
+    db.refresh(community)
+
+    return community
+
 @router.delete("/{community_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_community(community_id: int, db: Session = Depends(get_db)):
+async def delete_community(
+    community_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     """
     특정 커뮤니티 게시물을 삭제합니다.
     """
-    community = crud.community.delete_community(db, community_id)
+    # 게시물 조회
+    community = crud.community.get_community(db, community_id)
     if not community:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="게시물을 찾을 수 없습니다.")
+    
+    # 작성자가 아닌 경우 권한 거부
+    if community.writer_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다.")
+
+    # 게시물 삭제
+    crud.community.delete_community(db, community_id)
     return
 
 @router.get("/", response_model=List[schemas.community.CommunitySearchResponse])
@@ -74,10 +121,24 @@ async def list_communities(keyword: Optional[str] = None, db: Session = Depends(
     return response_data
 
 @router.post("/{community_id}/image", status_code=status.HTTP_201_CREATED)
-async def upload_image(community_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_image(
+    community_id: int, 
+    file: UploadFile = File(...), 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
     """
     특정 커뮤니티 게시물의 이미지를 업로드하고 데이터베이스에 저장합니다.
     """
+    # community_id로 커뮤니티 게시물 조회
+    community = db.query(Community).filter(Community.id == community_id).first()
+    if not community:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="게시물을 찾을 수 없습니다.")
+
+    # 작성자가 아닌 경우 권한 거부
+    if community.writer_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="권한이 없습니다.")
+
     # 이미지 파일 이름 생성
     image_filename = f"{uuid4()}{Path(file.filename).suffix}"
     image_path = UPLOAD_DIR / image_filename
@@ -85,11 +146,6 @@ async def upload_image(community_id: int, file: UploadFile = File(...), db: Sess
     # 파일 저장
     with open(image_path, "wb") as buffer:
         buffer.write(file.file.read())
-
-    # community_id로 커뮤니티 게시물 조회
-    community = db.query(Community).filter(Community.id == community_id).first()
-    if not community:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="게시물을 찾을 수 없습니다.")
 
     # 이미지 경로를 데이터베이스에 업데이트
     community.image = image_filename
