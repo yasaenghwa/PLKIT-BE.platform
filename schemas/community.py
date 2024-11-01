@@ -32,11 +32,19 @@ class CommunityResponse(BaseModel):
 class CommunitySearchResponse(BaseModel):
     id: int
     writer_name: str
+    writer_id: int
     title: str
     content: str
     image: Optional[str] = None
     created_at: datetime
     answers: List[dict] = []
+
+    class Config:
+        orm_mode = True
+        
+class CommunityUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
 
     class Config:
         orm_mode = True
