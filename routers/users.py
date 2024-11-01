@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from fastapi.responses import FileResponse
-from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import crud, schemas, database
 from schemas.user import UserResponse, UserLinkCreate, UserLinkResponse
@@ -10,40 +9,13 @@ from config import settings
 from uuid import uuid4
 from pathlib import Path
 from models.user import User, UserLink
+from security import get_current_user
 
 router = APIRouter(prefix="/users", tags=["Users"])
-
-router = APIRouter(prefix="/users", tags=["Users"])
-
-# OAuth2PasswordBearer 설정
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 # 프로필 이미지 저장 경로 설정
 UPLOAD_DIR = Path("uploads/avatars")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-# 현재 사용자 검증 함수
-async def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(database.get_db)
-):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="자격 증명을 확인할 수 없습니다.",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except jwt.PyJWTError:
-        raise credentials_exception
-    user = crud.user.get_user_by_email(db, email=email)
-    if user is None:
-        raise credentials_exception
-    return user
 
 @router.get("/me", response_model=UserResponse)
 async def read_user_me(
