@@ -72,7 +72,7 @@ async def list_communities(keyword: Optional[str] = None, db: Session = Depends(
 
     return response_data
 
-@router.post("/communities/{community_id}/image", status_code=status.HTTP_201_CREATED)
+@router.post("/{community_id}/image", status_code=status.HTTP_201_CREATED)
 async def upload_image(community_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
     """
     특정 커뮤니티 게시물의 이미지를 업로드하고 데이터베이스에 저장합니다.
