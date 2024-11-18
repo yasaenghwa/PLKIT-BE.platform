@@ -27,6 +27,7 @@ class MarketUpdate(MarketBase):
 
 class MarketResponse(MarketBase):
     id: int
+    writer_id: int
     
     class Config:
         orm_mode = True
