@@ -1,4 +1,4 @@
-from http.client import HTTPException, status
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from models.market import Market
 from schemas.market import MarketCreate, MarketUpdate
