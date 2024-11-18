@@ -20,7 +20,7 @@ class MarketCreate(MarketBase):
     location: str
     farm_name: str
     cultivation_period: str
-    writer_id: int
+    writer_id: Optional[int] = None
 
 class MarketUpdate(MarketBase):
     pass
